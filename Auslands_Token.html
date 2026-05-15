@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>Token出海 · 成本科普计算器</title>
+    <!-- Chart.js 轻量图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0b0f1a 0%, #111827 100%);
+            font-family: 'Segoe UI', 'Roboto', system-ui, -apple-system, sans-serif;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .container {
+            max-width: 950px;
+            width: 100%;
+            background: rgba(18, 25, 40, 0.7);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(74, 144, 226, 0.25);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(56, 189, 248, 0.2) inset;
+            padding: 2rem 2rem 2.2rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #a5f3fc, #7dd3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .subtitle {
+            color: #94a3b8;
+            margin-bottom: 1.8rem;
+            font-size: 1.05rem;
+            border-left: 3px solid #38bdf8;
+            padding-left: 1rem;
+        }
+
+        /* 模型切换选项卡 */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.8rem;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 0.7rem 1.6rem;
+            border-radius: 3rem;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(71, 85, 105, 0.6);
+            color: #cbd5e1;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            backdrop-filter: blur(4px);
+        }
+        .tab.active {
+            background: #0f2740;
+            border-color: #38bdf8;
+            color: #e0f2fe;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+        }
+
+        /* 卡片布局 */
+        .card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.8rem;
+        }
+        @media (max-width: 700px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 1.8rem;
+            padding: 1.3rem 1.3rem 1.5rem;
+            box-shadow: 0 10px 25px -8px rgba(0,0,0,0.6);
+        }
+        .card h3 {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #b9e0f7;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .slider-group {
+            margin-bottom: 1.1rem;
+        }
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #9ca3af;
+            margin-bottom: 0.2rem;
+        }
+        .slider-group input[type=range] {
+            width: 100%;
+            accent-color: #38bdf8;
+            background: #1e293b;
+            height: 6px;
+            border-radius: 5px;
+        }
+        .value-badge {
+            background: #0f1a2f;
+            padding: 0.2rem 0.8rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            color: #7dd3fc;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.4rem;
+        }
+        .preset-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            padding: 0.3rem 0.9rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .preset-btn:hover {
+            background: #2d3b52;
+            border-color: #38bdf8;
+            color: white;
+        }
+
+        .result-box {
+            background: #0b1322;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            border: 1px solid #2d3b4f;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.95rem;
+        }
+        .highlight-red {
+            color: #f87171;
+            font-weight: 700;
+        }
+        .highlight-green {
+            color: #4ade80;
+            font-weight: 700;
+        }
+        .highlight-yellow {
+            color: #facc15;
+            font-weight: 700;
+        }
+
+        .chart-container {
+            margin-top: 1rem;
+            height: 220px;
+            position: relative;
+        }
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        .conclusion-banner {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 1.5rem;
+            padding: 1.2rem 1.5rem;
+            margin: 1.5rem 0 0.8rem;
+            border-left: 5px solid #facc15;
+            font-weight: 500;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+        }
+
+        .idle-note {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin-top: 1.2rem;
+            font-size: 0.9rem;
+            color: #b9c7dd;
+            border: 1px dashed #5b6e8c;
+        }
+
+        footer {
+            margin-top: 1.2rem;
+            text-align: center;
+            color: #5f6e86;
+            font-size: 0.8rem;
+        }
+        .inline-code {
+            background: #1e2a3a;
+            padding: 0.1rem 0.5rem;
+            border-radius: 0.4rem;
+            font-family: 'Fira Code', monospace;
+            color: #7dd3fc;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⚡ Token出海 · 成本计算器</h1>
+    <div class="subtitle">自己买机器跑DeepSeek，再把Token卖到海外，能赚钱吗？<br>拖动滑块，所有数字实时呈现 —— 经济学不会撒谎。</div>
+
+    <!-- 模型选择 -->
+    <div class="tabs" id="modelTabs">
+        <div class="tab active" data-model="flash">🔹 V4-Flash (低配方案)</div>
+        <div class="tab" data-model="pro">🔸 V4-Pro (高配方案)</div>
+    </div>
+
+    <!-- 主内容区：参数 + 图表 -->
+    <div class="card-grid">
+        <!-- 左：参数控制 -->
+        <div class="card" id="paramCard">
+            <h3>🔧 你的部署参数</h3>
+            <div class="slider-group">
+                <label>💡 电价 <span class="value-badge" id="elecPriceLabel">0.52 元/度</span></label>
+                <input type="range" id="elecSlider" min="0.10" max="1.50" step="0.01" value="0.52">
+                <div class="preset-buttons">
+                    <span class="preset-btn" data-price="0.52">🏠居民电0.52</span>
+                    <span class="preset-btn" data-price="0.15">☀️新疆光伏0.15</span>
+                    <span class="preset-btn" data-price="1.22">🇺🇸美国居民1.22</span>
+                </div>
+            </div>
+            <div class="slider-group">
+                <label>🖥️ 硬件成本 <span class="value-badge" id="hwCostLabel">35,496 元</span></label>
+                <input type="range" id="hwSlider" min="10000" max="2200000" step="100" value="35496">
+                <div class="preset-buttons" id="hwPresets">
+                    <!-- 动态填充 -->
+                </div>
+            </div>
+            <div class="slider-group">
+                <label>⚡ 推理速度 <span class="value-badge" id="speedLabel">20 tok/s</span></label>
+                <input type="range" id="speedSlider" min="8" max="18000" step="1" value="20">
+            </div>
+            <div class="slider-group">
+                <label>📦 API输出价格 <span class="value-badge" id="apiPriceLabel">2.00 元/百万token</span></label>
+                <input type="range" id="apiSlider" min="1.0" max="26.0" step="0.1" value="2.0">
+            </div>
+            <div style="font-size:0.8rem; color:#7f8ea3; margin-top:0.3rem;">* 所有参数可手动微调，模拟不同条件</div>
+        </div>
+
+        <!-- 右：实时结果 + 图表 -->
+        <div class="card" id="resultCard">
+            <h3>📊 实时成本对比</h3>
+            <div class="result-box" id="metricsBox">
+                <div class="result-row"><span>⚡ 每百万token电费</span> <span class="highlight-red" id="costPerM">7.22 元</span></div>
+                <div class="result-row"><span>📦 API售价</span> <span id="apiPriceDisplay">2.00 元/百万token</span></div>
+                <div class="result-row"><span>⚖️ 运行盈亏</span> <span id="runVerdict" class="highlight-red">每生成一个token都在亏钱</span></div>
+                <div class="result-row" id="roiRow" style="display:none;"><span>🔁 硬件回本需处理</span> <span id="roiTokens">-</span></div>
+                <div class="result-row" id="roiTimeRow" style="display:none;"><span>⏳ 回本时间</span> <span id="roiTime">-</span></div>
+            </div>
+            <div class="chart-container">
+                <canvas id="costChart" width="400" height="180"></canvas>
+            </div>
+            <div style="font-size:0.75rem; color:#7c879c; margin-top:0.3rem;">横轴：累计生成的Token量（百万token）<br>蓝线=本地总花费，橙线=直接买API总花费</div>
+        </div>
+    </div>
+
+    <!-- 动态结论区 -->
+    <div class="conclusion-banner" id="conclusionText">
+        💡 当前电价下，本地运行V4-Flash的电费成本(7.22元/百万token)已高于API售价(2.00元)。即使硬件白送，每生成一个token都在亏损。
+    </div>
+
+    <!-- 闲置算力说明 -->
+    <div class="idle-note">
+        <strong>🧩 关于“整合闲置GPU算力”</strong><br>
+        想法很巧妙：不买硬件，租用别人闲置的显卡来跑推理，做“算力界的滴滴”。但DeepSeek V4这类混合专家模型，要求显卡之间高速直连（NVLink/InfiniBand），延迟必须极低。地理上分散的闲置设备靠普通宽带互联，通信瓶颈会让推理几近瘫痪。技术上可行吗？<span style="color:#f87171;">目前没有经济可行的方案。</span>
+    </div>
+    <footer>
+        数据基于DeepSeek V4 官方定价(2026.4) · 硬件成本为市场参考价 · 计算结果仅供科普
+    </footer>
+</div>
+
+<script>
+    (function() {
+        // ----- 模型预设数据 -----
+        const models = {
+            flash: {
+                name: 'V4-Flash',
+                defaultHW: 35496,
+                defaultSpeed: 20,        // tokens/s
+                defaultPower: 1.0,      // kW
+                defaultAPI: 2.0,        // 元/百万token
+                hwPresets: [
+                    { label: '💰乞丐版 35,496', value: 35496 },
+                    { label: '🖥️中配 55,000', value: 55000 },
+                ],
+                speedPresets: [15, 20, 25],
+                apiPresets: [2.0, 2.5],
+                power: 1.0,
+                desc: 'V4-Flash量化版 · 2x RTX 4090'
+            },
+            pro: {
+                name: 'V4-Pro',
+                defaultHW: 2000000,
+                defaultSpeed: 15000,
+                defaultPower: 3.2,
+                defaultAPI: 6.0,        // 优惠价
+                hwPresets: [
+                    { label: '🏭入门服务器 200万', value: 2000000 },
+                    { label: '🏢专业集群 350万', value: 3500000 },
+                ],
+                speedPresets: [12000, 15000, 18000],
+                apiPresets: [6.0, 24.0], // 优惠价和标准价
+                power: 3.2,
+                desc: 'V4-Pro · 4x H200 141GB'
+            }
+        };
+
+        // 当前模型
+        let currentModel = 'flash';
+
+        // DOM 元素
+        const tabFlash = document.querySelector('.tab[data-model="flash"]');
+        const tabPro = document.querySelector('.tab[data-model="pro"]');
+        const elecSlider = document.getElementById('elecSlider');
+        const elecPriceLabel = document.getElementById('elecPriceLabel');
+        const hwSlider = document.getElementById('hwSlider');
+        const hwCostLabel = document.getElementById('hwCostLabel');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedLabel = document.getElementById('speedLabel');
+        const apiSlider = document.getElementById('apiSlider');
+        const apiPriceLabel = document.getElementById('apiPriceLabel');
+        const costPerM = document.getElementById('costPerM');
+        const apiPriceDisplay = document.getElementById('apiPriceDisplay');
+        const runVerdict = document.getElementById('runVerdict');
+        const roiRow = document.getElementById('roiRow');
+        const roiTokens = document.getElementById('roiTokens');
+        const roiTimeRow = document.getElementById('roiTimeRow');
+        const roiTime = document.getElementById('roiTime');
+        const conclusionText = document.getElementById('conclusionText');
+        const hwPresetsDiv = document.getElementById('hwPresets');
+
+        // 图表相关
+        let chartInstance = null;
+        const ctx = document.getElementById('costChart').getContext('2d');
+
+        // ----- 工具函数：更新UI所有数值 -----
+        function updateAll() {
+            const elecPrice = parseFloat(elecSlider.value);
+            const hwCost = parseFloat(hwSlider.value);
+            const speed = parseFloat(speedSlider.value);
+            const apiPrice = parseFloat(apiSlider.value);
+            const model = models[currentModel];
+            const power = model.power; // kW
+
+            // 更新标签
+            elecPriceLabel.textContent = elecPrice.toFixed(2) + ' 元/度';
+            hwCostLabel.textContent = hwCost.toLocaleString('zh-CN') + ' 元';
+            speedLabel.textContent = speed.toLocaleString('zh-CN') + ' tok/s';
+            apiPriceLabel.textContent = apiPrice.toFixed(2) + ' 元/百万token';
+            apiPriceDisplay.textContent = apiPrice.toFixed(2) + ' 元/百万token';
+
+            // 每小时生成百万token数
+            const tokensPerHour = (speed * 3600) / 1_000_000; // 百万token/h
+            // 每百万token电费成本 = (功率 * 电价) / 每小时百万token数
+            const elecCostPerM = (power * elecPrice) / tokensPerHour;
+
+            costPerM.textContent = elecCostPerM.toFixed(2) + ' 元';
+            costPerM.className = elecCostPerM > apiPrice ? 'highlight-red' : 'highlight-green';
+
+            // 运行盈亏判断
+            const runProfitable = elecCostPerM < apiPrice;
+            if (runProfitable) {
+                runVerdict.textContent = '✅ 运行成本低于API，有毛利空间';
+                runVerdict.className = 'highlight-green';
+            } else {
+                runVerdict.textContent = '❌ 每生成一个token都在亏钱（电费 > API价）';
+                runVerdict.className = 'highlight-red';
+            }
+
+            // 硬件回本计算 (仅当运行毛利为正时才可能回本)
+            const marginPerM = apiPrice - elecCostPerM; // 每百万token节省/赚取的金额
+            if (marginPerM > 0 && hwCost > 0) {
+                const breakevenTokens = hwCost / marginPerM; // 百万token
+                const breakevenHours = breakevenTokens / tokensPerHour;
+                const breakevenDays = breakevenHours / 24;
+                roiRow.style.display = 'flex';
+                roiTimeRow.style.display = 'flex';
+                roiTokens.textContent = breakevenTokens.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' 百万token';
+                let timeStr = '';
+                if (breakevenDays >= 365) {
+                    timeStr = (breakevenDays/365).toFixed(1) + ' 年';
+                } else if (breakevenDays >= 1) {
+                    timeStr = breakevenDays.toFixed(1) + ' 天';
+                } else {
+                    timeStr = breakevenHours.toFixed(1) + ' 小时';
+                }
+                roiTime.textContent = timeStr + ' (24h满载)';
+            } else {
+                roiRow.style.display = 'none';
+                roiTimeRow.style.display = 'none';
+            }
+
+            // 更新累计成本图表
+            updateChart(elecCostPerM, apiPrice, hwCost, marginPerM);
+
+            // 更新底部结论文字
+            updateConclusion(elecCostPerM, apiPrice, hwCost, marginPerM, runProfitable, model);
+        }
+
+        // ----- 图表：累计成本曲线 -----
+        function updateChart(elecCostPerM, apiPrice, hwCost, marginPerM) {
+            // 生成x轴范围 (百万token)
+            let maxX = 500; // 默认500百万token
+            if (currentModel === 'pro') {
+                maxX = 800000; // pro场景需要很大范围才能看到交点
+            }
+            // 动态调整maxX以包含回本点
+            if (marginPerM > 0 && hwCost > 0) {
+                const beX = hwCost / marginPerM;
+                maxX = Math.max(maxX, beX * 1.3);
+            } else if (currentModel === 'flash') {
+                maxX = 20000; // flash即使无法回本，展示较大范围
+            }
+
+            const points = 80;
+            const step = maxX / points;
+            const localCosts = [];
+            const apiCosts = [];
+            const labels = [];
+            for (let i = 0; i <= points; i++) {
+                const x = i * step;
+                labels.push(x.toFixed(0));
+                localCosts.push(hwCost + elecCostPerM * x);
+                apiCosts.push(apiPrice * x);
+            }
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '本地总花费 (硬件+电费)',
+                            data: localCosts,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56,189,248,0.1)',
+                            tension: 0.2,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                        },
+                        {
+                            label: '直接调用API总花费',
+                            data: apiCosts,
+                            borderColor: '#f97316',
+                            backgroundColor: 'rgba(249,115,22,0.1)',
+                            tension: 0.2,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            borderDash: [5,3],
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#cbd5e1', font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ¥${ctx.raw.toFixed(2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: '百万token', color: '#94a3b8' },
+                            ticks: { color: '#94a3b8', maxTicksLimit: 8 },
+                            grid: { color: 'rgba(71,85,105,0.3)' }
+                        },
+                        y: {
+                            title: { display: true, text: '累计花费 (元)', color: '#94a3b8' },
+                            ticks: { color: '#94a3b8', callback: (v) => '¥'+v.toLocaleString() },
+                            grid: { color: 'rgba(71,85,105,0.3)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateConclusion(elecCostPerM, apiPrice, hwCost, marginPerM, runProfitable, model) {
+            let text = '';
+            if (currentModel === 'flash') {
+                if (!runProfitable) {
+                    text = `🔴 对于V4-Flash，当前电价下每百万token电费 ${elecCostPerM.toFixed(2)} 元，已高于API售价 ${apiPrice.toFixed(2)} 元。即使白送硬件，只要开机就在亏钱。`;
+                    if (elecCostPerM > apiPrice) {
+                        const neededPrice = (apiPrice * 0.072).toFixed(3);
+                        text += ` 要想电费打平，电价必须低于 ${neededPrice} 元/度（目前中国最低工业电价0.15元/度，依然不够低）。`;
+                    }
+                } else {
+                    text = `🟢 罕见情况：电价极低，运行有毛利。但硬件成本${hwCost.toLocaleString()}元，需要大量Token才能回本。`;
+                }
+            } else { // pro
+                if (runProfitable) {
+                    const beTokens = hwCost / marginPerM;
+                    const beHours = beTokens / ((models.pro.defaultSpeed*3600)/1e6);
+                    const beDays = beHours/24;
+                    text = `🟡 V4-Pro电费成本极低 (${elecCostPerM.toFixed(4)} 元/百万token)，但硬件投入巨大 (${(hwCost/10000).toFixed(0)}万元)。`;
+                    if (beDays < 365) {
+                        text += ` 理论上连续运行 ${beDays.toFixed(0)} 天可回本硬件。但前提是API价格不降、机器不出故障，且你能持续获得客户。`;
+                    } else {
+                        text += ` 回本需 ${beDays.toFixed(1)} 天（超过1年），风险较高。`;
+                    }
+                } else {
+                    text = `🔴 V4-Pro运行电费竟然高于API价格？检查电价或API定价。`;
+                }
+            }
+            conclusionText.innerHTML = '💡 ' + text;
+        }
+
+        // ----- 模型切换逻辑 -----
+        function switchModel(modelKey) {
+            currentModel = modelKey;
+            const model = models[modelKey];
+            // 更新选项卡样式
+            tabFlash.classList.remove('active');
+            tabPro.classList.remove('active');
+            if (modelKey === 'flash') tabFlash.classList.add('active');
+            else tabPro.classList.add('active');
+
+            // 重置滑块到该模型默认值
+            elecSlider.value = 0.52;
+            hwSlider.value = model.defaultHW;
+            speedSlider.value = model.defaultSpeed;
+            apiSlider.value = model.defaultAPI;
+
+            // 更新硬件预设按钮
+            let presetHTML = '';
+            model.hwPresets.forEach(p => {
+                presetHTML += `<span class="preset-btn" data-hw="${p.value}">${p.label}</span>`;
+            });
+            hwPresetsDiv.innerHTML = presetHTML;
+
+            // 更新电价预设（保持通用）
+            // 已存在，无需改变
+
+            updateAll();
+        }
+
+        // ----- 事件绑定 -----
+        elecSlider.addEventListener('input', updateAll);
+        hwSlider.addEventListener('input', updateAll);
+        speedSlider.addEventListener('input', updateAll);
+        apiSlider.addEventListener('input', updateAll);
+
+        // 电价预设按钮
+        document.querySelectorAll('.preset-btn[data-price]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const price = parseFloat(this.dataset.price);
+                elecSlider.value = price;
+                updateAll();
+            });
+        });
+
+        // 硬件预设按钮 (委托)
+        hwPresetsDiv.addEventListener('click', (e) => {
+            if (e.target.classList.contains('preset-btn') && e.target.dataset.hw) {
+                hwSlider.value = parseFloat(e.target.dataset.hw);
+                updateAll();
+            }
+        });
+
+        // 模型选项卡
+        tabFlash.addEventListener('click', () => switchModel('flash'));
+        tabPro.addEventListener('click', () => switchModel('pro'));
+
+        // 初始化
+        switchModel('flash');
+    })();
+</script>
+</body>
+</html>
